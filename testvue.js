@@ -4,9 +4,11 @@ let me = new Vue({
         timer: 0,
         wwd: null,
         layerDebris: null,
+        orbitsLayer: null,
         satData: [],
         satNum: 0,
         everyCurrentPosition: [],
+        startOrbit: null
     },
     watch: {
         timer: function (val) {
@@ -31,7 +33,9 @@ let me = new Vue({
     
             //var geoDebrisLayer = new WorldWind.RenderableLayer("Debris");
             this.layerDebris = new WorldWind.RenderableLayer("Debris");
+            this.orbitsLayer = new WorldWind.RenderableLayer("Orbit");
             this.wwd.addLayer(this.layerDebris);
+            this.wwd.addLayer(this.orbitsLayer);
             var satParserWorker = new Worker("satelliteParseWorker.js");
             satParserWorker.postMessage("work, satellite parser, work!");
             satParserWorker.addEventListener('message', (event) => {
@@ -62,7 +66,7 @@ let me = new Vue({
                   // var velocity = this.getVelocity(satellite.twoline2satrec(this.satData[j].TLE_LINE1, this.satData[j].TLE_LINE2), time);
                   var position = this.getPosition(satellite.twoline2satrec(this.satData[j].TLE_LINE1, this.satData[j].TLE_LINE2), time);
               } catch (err) {
-                  console.log(err + ' in renderSats, sat ' + j );
+                  console.log(err + ' in renderSats, sat ' + j);
                   this.everyCurrentPosition.push(null);
                   continue;
               }
@@ -108,10 +112,15 @@ let me = new Vue({
               this.wwd.redraw();
             }
 
-
-            var updatePositions = setInterval(function () {
-              me.reComputeLocation();
+            var updatePositions = setInterval(() => {
+                this.reComputeLocation();
             }, 2000);
+
+            // Listen for mouse clicks.
+            var clickRecognizer = new WorldWind.ClickRecognizer(this.wwd, this.handleClick);
+
+            // Listen for taps on mobile devices.
+            var tapRecognizer = new WorldWind.TapRecognizer(this.wwd, this.handleClick);
         },
         reComputeLocation: function () {
             for (var indx = 0; indx < this.satNum; indx += 1) {
@@ -217,6 +226,94 @@ let me = new Vue({
               day + 1721013.5 +
               ((sec / 60.0 + minute) / 60.0 + hr) / 24.0  //  ut in days
             );
+        },
+        handleClick: function (recognizer) {
+            // The input argument is either an Event or a TapRecognizer. Both have the same properties for determining
+            // the mouse or tap location.
+            var x = recognizer.clientX,
+                y = recognizer.clientY;
+    
+            // Perform the pick. Must first convert from window coordinates to canvas coordinates, which are
+            // relative to the upper left corner of the canvas rather than the upper left corner of the page.
+            var rectRadius = 1,
+                pickPoint = this.wwd.canvasCoordinates(x, y),
+                pickRectangle = new WorldWind.Rectangle(pickPoint[0] - rectRadius, pickPoint[1] + rectRadius,
+                    2 * rectRadius, 2 * rectRadius);
+    
+            var pickList = this.wwd.pickShapesInRegion(pickRectangle);
+    
+            if (pickList.objects.length > 0) {
+                for (var p = 0; p < pickList.objects.length; p++) {
+                    if (pickList.objects[p].isOnTop) {
+                        // Highlight the items picked.
+                        pickList.objects[p].userObject.highlighted = true;
+                        // highlightedItems.push(pickList.objects[p].userObject);
+    
+                        //Populate Info window with proper data
+                        var position = pickList.objects[p].position;
+                            satIndex = this.everyCurrentPosition.indexOf(position);
+                        this.orbitsLayer.enabled = true;
+                        if (satIndex > -1) {
+                            this.createOrbit(satIndex);
+                        }
+                        //Redraw highlighted items
+                        this.wwd.redraw();
+                    }
+                }
+            }
+        },
+        createOrbit: function (index) {
+            this.endOrbit();
+            this.startOrbit = window.setInterval(() => {
+                this.orbitsLayer.removeAllRenderables();
+                var now = new Date();
+                var pastOrbit = [];
+                var futureOrbit = [];
+                for (var i = -60; i <= 60; i++) {
+                    var time = new Date(now.getTime() + (i * 1000 * 60) + (this.timer * 1000 * 60));
+                    try {
+                        var position = this.getPosition(satellite.twoline2satrec(this.satData[index].TLE_LINE1, this.satData[index].TLE_LINE2), time);
+                    } catch (err) {
+                        console.log(err + ' in createOrbit, sat ' + index);
+                        continue;
+                    }
+    
+                    if (i <= 0) {
+                        pastOrbit.push(position);
+                    }
+                    if (i >= 0) {
+                        futureOrbit.push(position);
+                    }
+                }
+    
+                // Orbit Path
+                var pastOrbitPathAttributes = new WorldWind.ShapeAttributes(null);
+                pastOrbitPathAttributes.outlineColor = WorldWind.Color.RED;
+                pastOrbitPathAttributes.interiorColor = new WorldWind.Color(1, 0, 0, 0.5);
+    
+                var futureOrbitPathAttributes = new WorldWind.ShapeAttributes(null);//pastAttributes
+                futureOrbitPathAttributes.outlineColor = WorldWind.Color.GREEN;
+                futureOrbitPathAttributes.interiorColor = new WorldWind.Color(0, 1, 0, 0.5);
+    
+                //plot orbit on click
+                var pastOrbitPath = new WorldWind.Path(pastOrbit);
+                pastOrbitPath.altitudeMode = WorldWind.RELATIVE_TO_GROUND;
+                pastOrbitPath.attributes = pastOrbitPathAttributes;
+                pastOrbitPath.useSurfaceShapeFor2D = true;
+    
+    
+                var futureOrbitPath = new WorldWind.Path(futureOrbit);
+                futureOrbitPath.altitudeMode = WorldWind.RELATIVE_TO_GROUND;
+                futureOrbitPath.attributes = futureOrbitPathAttributes;
+                futureOrbitPath.useSurfaceShapeFor2D = true;
+    
+                this.orbitsLayer.addRenderable(pastOrbitPath);
+                this.orbitsLayer.addRenderable(futureOrbitPath);
+            });
+        },
+        endOrbit: function () {
+            clearInterval(this.startOrbit);
+            this.orbitsLayer.removeAllRenderables();
         }
     },
     mounted () {
