@@ -6,10 +6,14 @@ let me = new Vue({
         wwd: null,
         layerDebris: null,
         orbitsLayer: null,
+        geocoder: null,
+        goToAnimator: null,
         satData: [],
         satNum: 0,
         everyCurrentPosition: [],
-        startOrbit: null
+        startOrbit: null,
+        queryString: null,
+        destination: null
     },
     watch: {
         timer: function (val) {
@@ -25,26 +29,28 @@ let me = new Vue({
         construct: function() {
             this.wwd = new WorldWind.WorldWindow("canvasOne");
             this.wwd.addLayer(new WorldWind.BMNGOneImageLayer());
-            this.wwd.addLayer(new WorldWind.BMNGLandsatLayer());
             this.wwd.addLayer(new WorldWind.CoordinatesDisplayLayer(this.wwd));
             this.wwd.addLayer(new WorldWind.ViewControlsLayer(this.wwd));
     
-            //var geoDebrisLayer = new WorldWind.RenderableLayer("Debris");
             this.layerDebris = new WorldWind.RenderableLayer("Debris");
             this.orbitsLayer = new WorldWind.RenderableLayer("Orbit");
             this.wwd.addLayer(this.layerDebris);
             this.wwd.addLayer(this.orbitsLayer);
-            var satParserWorker = new Worker("satelliteParseWorker.js");
+
+            this.geocoder = new WorldWind.NominatimGeocoder();
+            this.goToAnimator = new WorldWind.GoToAnimator(this.wwd);
+
+            this.layerDebris.enabled = false
+            this.getSatellites();
+        },
+        getSatellites: function() {
+            let satParserWorker = new Worker("satelliteParseWorker.js");
             satParserWorker.postMessage("work, satellite parser, work!");
             satParserWorker.addEventListener('message', (event) => {
                 satParserWorker.postMessage('close');
-                this.getSatellites(event.data);
+                this.satData = event.data;
+                this.renderSats();
             }, false);
-        },
-        getSatellites: function(satellites) {
-            this.satData = satellites;
-            // this.satData.satDataString = JSON.stringify(satPac);
-            this.renderSats();
         },
         renderSats: function () {
             var satNames = [];
@@ -111,7 +117,7 @@ let me = new Vue({
 
             var updatePositions = setInterval(() => {
                 this.reComputeLocation();
-            }, 2000);
+            });
 
             // Listen for mouse clicks.
             var clickRecognizer = new WorldWind.ClickRecognizer(this.wwd, this.handleClick);
@@ -120,8 +126,9 @@ let me = new Vue({
             var tapRecognizer = new WorldWind.TapRecognizer(this.wwd, this.handleClick);
         },
         reComputeLocation: function () {
+            var time = new Date(new Date().getTime() + this.timer * 60000);
+            this.datetime = time
             for (var indx = 0; indx < this.satNum; indx += 1) {
-                var time = new Date(new Date().getTime()+ this.timer * 60000);
                 try {
                     var position = this.getPosition(satellite.twoline2satrec(this.satData[indx].TLE_LINE1, this.satData[indx].TLE_LINE2), time);
                     //satVelocity[indx] = getVelocity(satellite.twoline2satrec(this.satData[indx].TLE_LINE1, this.satData[indx].TLE_LINE2), time);
@@ -140,30 +147,6 @@ let me = new Vue({
                 }
             }
             this.wwd.redraw();
-        },
-        sanitizeSatellites: function (objectArray) {
-            var faultySatellites = 0;
-            var resultArray = [];
-            var maxSats = objectArray.length;
-            var now = new Date();
-            var time = new Date(now.getTime());
-            for (var i = 0; i < maxSats; i += 1) {
-                try {
-                    var position = this.getPosition(satellite.twoline2satrec(objectArray[i].TLE_LINE1, objectArray[i].TLE_LINE2), time);
-                    // var velocity = this.getVelocity(satellite.twoline2satrec(objectArray[i].TLE_LINE1, objectArray[i].TLE_LINE2), time);
-                } catch (err) {
-                    // console.log(objectArray[i].OBJECT_NAME +" is a faulty sat it is " + i);
-                    faultySatellites += 1;
-                    console.log(err);
-                    continue;
-                }
-
-                resultArray.push(objectArray[i]);
-            }
-            console.log(faultySatellites);
-            console.log(objectArray.length + " from uncleansed");
-            console.log(resultArray.length + " from cleansed");
-            return resultArray;
         },
         getPosition: function (satrec, time) {
             var position_and_velocity = satellite.propagate(satrec,
@@ -222,6 +205,7 @@ let me = new Vue({
             );
         },
         handleClick: function (recognizer) {
+            this.endOrbit();
             // The input argument is either an Event or a TapRecognizer. Both have the same properties for determining
             // the mouse or tap location.
             var x = recognizer.clientX,
@@ -308,6 +292,26 @@ let me = new Vue({
         endOrbit: function () {
             clearInterval(this.startOrbit);
             this.orbitsLayer.removeAllRenderables();
+        },
+        goTo: function () {
+            this.geocoder.lookup(this.queryString, (geocoder, result) => {
+                if (result.length > 0) {
+                    let latitude = parseFloat(result[0].lat);
+                    let longitude = parseFloat(result[0].lon);
+            
+                    WorldWind.Logger.log(
+                        WorldWind.Logger.LEVEL_INFO, this.queryString + ": " + latitude + ", " + longitude);
+            
+                    this.goToAnimator.goTo(new WorldWind.Location(latitude, longitude));
+                    this.destination = {
+                        latitude: latitude,
+                        longitude: longitude
+                    }
+                }
+            });
+        },
+        toggle: function () {
+            this.layerDebris.enabled = !this.layerDebris.enabled;
         }
     },
     mounted () {

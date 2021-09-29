@@ -15,7 +15,7 @@ function onMessage(inputMessage){
     self.close();
   }
   else{
-    loadJSON('./data/_now-30.json',
+    loadJSON('./data/LEO_now-30.json',
       function(data) {
         self.postMessage(data); //Sending JSON object to the main thread
       },

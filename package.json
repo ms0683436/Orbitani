@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "dependencies": {
     "@nasaworldwind/worldwind": "^0.10.0",
+    "bootstrap": "^5.1.1",
     "vue": "^2.6.14"
   },
   "devDependencies": {},
