@@ -23,9 +23,6 @@ let me = new Vue({
     },
     methods: {
         construct: function() {
-            const canvas = this.$el.querySelector('#canvasOne');
-            canvas.width = 800;
-            canvas.height = 600;
             this.wwd = new WorldWind.WorldWindow("canvasOne");
             this.wwd.addLayer(new WorldWind.BMNGOneImageLayer());
             this.wwd.addLayer(new WorldWind.BMNGLandsatLayer());

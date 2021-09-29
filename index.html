@@ -10,21 +10,21 @@
         <script src="satelite.js" type="text/javascript"></script>
     </head>
     <body>
-        <div id="globe">
+        <div id="globe" class="container">
+            <h1>ORBITANI</h1>
             <div class="row">
                 <div class="col-sm-3">
-                    <h1>ORBITANI</h1>
                     <h3>Time: {{ datetime }}</h5>
                     <p>Time Slider: {{ timer }} min</p>
-                    <input type="range" list="tickmarks" min="-60" max="60" value="0" step="5" style="width: 50%;" v-model="timer" >
+                    <input type="range" list="tickmarks" min="-60" max="60" value="0" step="5" style="width: 100%;" v-model="timer" >
                 </div>
                 <div class="col-sm-9">
-                    <canvas id="canvasOne" style="width: 100%; height: auto; background-color: black;">
+                    <canvas id="canvasOne" width="1000" height="1000" style="width: 100%; height: auto; background-color: black;">
                         Your browser does not support HTML5 Canvas.
                     </canvas>
                 </div>
             </div>
         </div>
-        <script src="testvue.js" type="text/javascript"></script>
+        <script src="index.js" type="text/javascript"></script>
     </body>
 </html>
