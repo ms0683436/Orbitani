@@ -6,14 +6,19 @@ let me = new Vue({
         wwd: null,
         layerDebris: null,
         orbitsLayer: null,
+        roundLayer: null,
         geocoder: null,
         goToAnimator: null,
+        TLE: null,
         satData: [],
         satNum: 0,
         everyCurrentPosition: [],
         startOrbit: null,
         queryString: null,
-        destination: null
+        destination: null,
+        radius: 6371,
+        loading: false,
+        radarRange: 100 //km
     },
     watch: {
         timer: function (val) {
@@ -34,23 +39,26 @@ let me = new Vue({
     
             this.layerDebris = new WorldWind.RenderableLayer("Debris");
             this.orbitsLayer = new WorldWind.RenderableLayer("Orbit");
+            this.roundLayer = new WorldWind.RenderableLayer();
             this.wwd.addLayer(this.layerDebris);
             this.wwd.addLayer(this.orbitsLayer);
+            this.wwd.addLayer(this.roundLayer);
 
             this.geocoder = new WorldWind.NominatimGeocoder();
             this.goToAnimator = new WorldWind.GoToAnimator(this.wwd);
-
-            this.layerDebris.enabled = false
-            this.getSatellites();
+            this.loadData()
         },
-        getSatellites: function() {
+        loadData: function () {
             let satParserWorker = new Worker("satelliteParseWorker.js");
             satParserWorker.postMessage("work, satellite parser, work!");
             satParserWorker.addEventListener('message', (event) => {
                 satParserWorker.postMessage('close');
-                this.satData = event.data;
-                this.renderSats();
+                this.TLE = event.data;
             }, false);
+        },
+        getSatellites: function(objects) {
+            this.satData = objects
+            this.renderSats()
         },
         renderSats: function () {
             var satNames = [];
@@ -255,7 +263,7 @@ let me = new Vue({
                         console.log(err + ' in createOrbit, sat ' + index);
                         continue;
                     }
-    
+
                     if (i <= 0) {
                         pastOrbit.push(position);
                     }
@@ -263,28 +271,27 @@ let me = new Vue({
                         futureOrbit.push(position);
                     }
                 }
-    
+
                 // Orbit Path
                 var pastOrbitPathAttributes = new WorldWind.ShapeAttributes(null);
                 pastOrbitPathAttributes.outlineColor = WorldWind.Color.RED;
                 pastOrbitPathAttributes.interiorColor = new WorldWind.Color(1, 0, 0, 0.5);
-    
+
                 var futureOrbitPathAttributes = new WorldWind.ShapeAttributes(null);//pastAttributes
                 futureOrbitPathAttributes.outlineColor = WorldWind.Color.GREEN;
                 futureOrbitPathAttributes.interiorColor = new WorldWind.Color(0, 1, 0, 0.5);
-    
+
                 //plot orbit on click
                 var pastOrbitPath = new WorldWind.Path(pastOrbit);
                 pastOrbitPath.altitudeMode = WorldWind.RELATIVE_TO_GROUND;
                 pastOrbitPath.attributes = pastOrbitPathAttributes;
                 pastOrbitPath.useSurfaceShapeFor2D = true;
-    
-    
+
                 var futureOrbitPath = new WorldWind.Path(futureOrbit);
                 futureOrbitPath.altitudeMode = WorldWind.RELATIVE_TO_GROUND;
                 futureOrbitPath.attributes = futureOrbitPathAttributes;
                 futureOrbitPath.useSurfaceShapeFor2D = true;
-    
+
                 this.orbitsLayer.addRenderable(pastOrbitPath);
                 this.orbitsLayer.addRenderable(futureOrbitPath);
             });
@@ -294,24 +301,94 @@ let me = new Vue({
             this.orbitsLayer.removeAllRenderables();
         },
         goTo: function () {
+            this.loading = true;
+            this.endOrbit();
+            this.removeDebris();
             this.geocoder.lookup(this.queryString, (geocoder, result) => {
                 if (result.length > 0) {
                     let latitude = parseFloat(result[0].lat);
                     let longitude = parseFloat(result[0].lon);
-            
+
                     WorldWind.Logger.log(
                         WorldWind.Logger.LEVEL_INFO, this.queryString + ": " + latitude + ", " + longitude);
-            
+
                     this.goToAnimator.goTo(new WorldWind.Location(latitude, longitude));
+                    this.locationRound(latitude, longitude)
+                    latitude = 2 * Math.PI * latitude / 360
+                    longitude = 2 * Math.PI * longitude / 360
+
                     this.destination = {
-                        latitude: latitude,
-                        longitude: longitude
+                        x: this.radius * Math.cos(latitude) * Math.cos(longitude),
+                        y: this.radius * Math.cos(latitude) * Math.sin(longitude),
+                        z: this.radius * Math.sin(latitude)
+                    }
+
+                    
+
+                    if (this.TLE.length > 0) {
+                        var now = new Date();
+                        var debris = [];
+                        for (var index = 0; index < this.TLE.length; index++) {
+                            for (var i = 0; i <= 60; i++) {
+                                var time = new Date(now.getTime() + (i * 1000 * 60) + (this.timer * 1000 * 60));
+                                try {
+                                    var position = this.getPosition(satellite.twoline2satrec(this.TLE[index].TLE_LINE1, this.TLE[index].TLE_LINE2), time);
+                                } catch (err) {
+                                    continue;
+                                }
+                                if (this.calCosAngle(position.latitude, position.longitude) > Math.cos(this.radarRange / this.radius)) {
+                                    debris.push(this.TLE[index]);
+                                    break;
+                                }
+                            }
+                        }
+                        this.getSatellites(debris)
                     }
                 }
+                this.loading = false;
             });
         },
-        toggle: function () {
-            this.layerDebris.enabled = !this.layerDebris.enabled;
+        removeDebris: function () {
+            this.satData = []
+            this.satNum = 0
+            this.everyCurrentPosition = []
+            this.layerDebris.removeAllRenderables();
+        },
+        removeAll: function () {
+            this.removeDebris();
+            this.endRound();
+        },
+        calCosAngle: function (tLatitude, tLongitude) {
+            let x = this.destination.x,
+                y = this.destination.y,
+                z = this.destination.z
+
+            tLatitude = 2 * Math.PI * tLatitude / 360
+            tLongitude = 2 * Math.PI * tLongitude / 360
+
+            let tx = this.radius * Math.cos(tLatitude) * Math.cos(tLongitude),
+                ty = this.radius * Math.cos(tLatitude) * Math.sin(tLongitude),
+                tz = this.radius * Math.sin(tLatitude)
+
+            return (x * tx + y * ty + z * tz) / (Math.sqrt(x * x + y * y + z * z) * Math.sqrt(tx * tx + ty * ty + tz * tz))
+        },
+        locationRound: function (latitude, longitude) {
+            this.endRound();
+            this.roundLayer.removeAllRenderables();
+            this.roundLayer.enabled = true;
+            var attributes = new WorldWind.ShapeAttributes(null);
+            attributes.outlineColor = new WorldWind.Color(28, 255, 47, 1);
+            attributes.interiorColor = new WorldWind.Color(28, 255, 47, 0.1);
+            var shape = new WorldWind.SurfaceCircle(new WorldWind.Location(
+                latitude,
+                longitude),
+                this.radarRange * 1000,
+                attributes);
+    
+            this.roundLayer.addRenderable(shape);
+        },
+        endRound: function () {
+            this.roundLayer.removeAllRenderables();
         }
     },
     mounted () {

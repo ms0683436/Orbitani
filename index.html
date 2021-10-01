@@ -13,7 +13,7 @@
             <h1>ORBITANI</h1>
             <div class="row">
                 <div class="col-sm-3">
-                    <h3>Time: {{ datetime }}</h5>
+                    <h3>Time: {{ datetime }}</h3>
                     <p>Time Slider: {{ timer }} min</p>
                     <input type="range" list="tickmarks" min="-60" max="60" value="0" step="5" style="width: 100%;" v-model="timer" >
                     <br>
@@ -21,13 +21,15 @@
                     <div class="input-group mb-3">
                         <input type="text" class="form-control" placeholder="" aria-label="" aria-describedby="basic-addon1" v-model="queryString">
                         <div class="input-group-append">
-                            <button class="btn btn-outline-secondary" type="button" @click="goTo">Go</button>
+                            <button class="btn btn-outline-secondary" type="button" @click="goTo" :disabled="loading">
+                                Go
+                                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" v-if="loading"></span>
+                            </button>
                         </div>
                     </div>
-                    <div class="custom-control custom-checkbox">
-                        <input type="checkbox" class="custom-control-input" id="customCheck1" @click="toggle">
-                        <label class="custom-control-label" for="customCheck1">Show Debris</label>
-                    </div>
+                    <p>Found: {{ satNum }} debris</p>
+                    <button class="btn btn-outline-secondary" type="button" @click="removeAll">clear all</button>
+                    <button class="btn btn-outline-secondary" type="button" @click="getSatellites(TLE)">show all</button>
                 </div>
                 <div class="col-sm-9">
                     <canvas id="canvasOne" width="1000" height="1000" style="width: 100%; height: auto; background-color: black;">
