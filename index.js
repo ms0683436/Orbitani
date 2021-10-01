@@ -18,7 +18,8 @@ let me = new Vue({
         destination: null,
         radius: 6371,
         loading: false,
-        radarRange: 100 //km
+        radarRange: 100, //km
+        debrisImgs: ['debris1.png', 'debris2.png', 'debris3.png', 'debris4.png', 'debris5.png', 'debris6.png']
     },
     watch: {
         timer: function (val) {
@@ -56,9 +57,15 @@ let me = new Vue({
                 this.TLE = event.data;
             }, false);
         },
-        getSatellites: function(objects) {
+        getSatellites: function (objects) {
             this.satData = objects
             this.renderSats()
+        },
+        getRandomIntInclusive: function () {
+            let min = 0, max = 5
+            min = Math.ceil(min);
+            max = Math.floor(max);
+            return Math.floor(Math.random() * (max - min + 1) + min); //The maximum is inclusive and the minimum is inclusive
         },
         renderSats: function () {
             var satNames = [];
@@ -99,8 +106,8 @@ let me = new Vue({
                 var placemarkAttributes = new WorldWind.PlacemarkAttributes(null);
                 var highlightPlacemarkAttributes = new WorldWind.PlacemarkAttributes(placemarkAttributes);
                 highlightPlacemarkAttributes.imageScale = 0.4;
-            
-                placemarkAttributes.imageSource = "assets/icons/red_dot.png";
+
+                placemarkAttributes.imageSource = "assets/icons/" + this.debrisImgs[this.getRandomIntInclusive()];
                 placemarkAttributes.imageScale = 0.2;
                 highlightPlacemarkAttributes.imageScale = 0.3;
             
@@ -274,11 +281,11 @@ let me = new Vue({
 
                 // Orbit Path
                 var pastOrbitPathAttributes = new WorldWind.ShapeAttributes(null);
-                pastOrbitPathAttributes.outlineColor = WorldWind.Color.RED;
+                pastOrbitPathAttributes.outlineColor = new WorldWind.Color(232, 71, 28, 0.5);
                 pastOrbitPathAttributes.interiorColor = new WorldWind.Color(1, 0, 0, 0.5);
 
                 var futureOrbitPathAttributes = new WorldWind.ShapeAttributes(null);//pastAttributes
-                futureOrbitPathAttributes.outlineColor = WorldWind.Color.GREEN;
+                futureOrbitPathAttributes.outlineColor = new WorldWind.Color(16, 232, 165, 0.5);
                 futureOrbitPathAttributes.interiorColor = new WorldWind.Color(0, 1, 0, 0.5);
 
                 //plot orbit on click
