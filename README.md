@@ -1,9 +1,9 @@
 # Orbitani
 Show debris on the earth.
 # Building
-
+install node js  
 `npm install`
 
 # Run
 
-Used server like `http-server`.
+`npm start`
