@@ -1,6 +1,6 @@
 let me = new Vue({
     el:'#globe',
-    data:{
+    data: {
         timer: 0,
         datetime: new Date(),
         wwd: null,
@@ -203,11 +203,11 @@ let me = new Vue({
             var m = (j - satrec.jdsatepoch) * 1440.0;
             var pv = satellite.sgp4(satrec, m);
             var vx, vy, vz;
-            
+
             vx = pv.velocity.x;
             vy = pv.velocity.y;
             vz = pv.velocity.z;
-            
+
             var satVelocity = Math.sqrt(
                 vx * vx +
                 vy * vy +
@@ -229,7 +229,7 @@ let me = new Vue({
             // the mouse or tap location.
             var x = recognizer.clientX,
                 y = recognizer.clientY;
-    
+
             // Perform the pick. Must first convert from window coordinates to canvas coordinates, which are
             // relative to the upper left corner of the canvas rather than the upper left corner of the page.
             var rectRadius = 1,
@@ -238,7 +238,7 @@ let me = new Vue({
                     2 * rectRadius, 2 * rectRadius);
     
             var pickList = this.wwd.pickShapesInRegion(pickRectangle);
-    
+
             if (pickList.objects.length > 0) {
                 for (var p = 0; p < pickList.objects.length; p++) {
                     if (pickList.objects[p].isOnTop) {
@@ -285,11 +285,11 @@ let me = new Vue({
 
                 // Orbit Path
                 var pastOrbitPathAttributes = new WorldWind.ShapeAttributes(null);
-                pastOrbitPathAttributes.outlineColor = new WorldWind.Color(232, 71, 28, 0.5);
+                pastOrbitPathAttributes.outlineColor = WorldWind.Color.YELLOW;
                 pastOrbitPathAttributes.interiorColor = new WorldWind.Color(1, 0, 0, 0.5);
 
                 var futureOrbitPathAttributes = new WorldWind.ShapeAttributes(null);//pastAttributes
-                futureOrbitPathAttributes.outlineColor = new WorldWind.Color(16, 232, 165, 0.5);
+                futureOrbitPathAttributes.outlineColor = WorldWind.Color.GREEN;
                 futureOrbitPathAttributes.interiorColor = new WorldWind.Color(0, 1, 0, 0.5);
 
                 //plot orbit on click

@@ -13,5 +13,5 @@ h1, p {
 
 @font-face {
     font-family: PhosphatePro;
-    src: url(assets/fonts/PhosphatePro-Inline.woff) format("woff");
+    src: url(/assets/fonts/PhosphatePro-Inline.woff) format("woff");
 }
