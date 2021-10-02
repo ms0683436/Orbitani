@@ -18,13 +18,11 @@ let me = new Vue({
         destination: null,
         radius: 6371,
         loading: false,
-        radarRange: 100, //km
+        radarRange: 100, // km
         debrisImgs: ['debris1.png', 'debris2.png', 'debris3.png', 'debris4.png', 'debris5.png', 'debris6.png']
     },
     watch: {
         timer: function (val) {
-            var now = new Date();
-            this.datetime = new Date(now.getTime() + this.timer * 1000 * 60);
             this.reComputeLocation();
         },
         satNum: function (val) {
@@ -36,7 +34,7 @@ let me = new Vue({
             this.wwd = new WorldWind.WorldWindow("canvasOne");
             this.wwd.addLayer(new WorldWind.BMNGOneImageLayer());
             this.wwd.addLayer(new WorldWind.CoordinatesDisplayLayer(this.wwd));
-            this.wwd.addLayer(new WorldWind.ViewControlsLayer(this.wwd));
+            // this.wwd.addLayer(new WorldWind.ViewControlsLayer(this.wwd));
     
             this.layerDebris = new WorldWind.RenderableLayer("Debris");
             this.orbitsLayer = new WorldWind.RenderableLayer("Orbit");
@@ -45,9 +43,19 @@ let me = new Vue({
             this.wwd.addLayer(this.orbitsLayer);
             this.wwd.addLayer(this.roundLayer);
 
+            this.wwd.navigator.lookAtLocation.latitude = 23.9037;
+            this.wwd.navigator.lookAtLocation.longitude = 121.0794;
+            this.wwd.navigator.range = 20e6; // 20 million meters above the ellipsoid
+
+            this.wwd.redraw();
             this.geocoder = new WorldWind.NominatimGeocoder();
             this.goToAnimator = new WorldWind.GoToAnimator(this.wwd);
             this.loadData()
+
+            setInterval(() => {
+                var now = new Date();
+                this.datetime = new Date(now.getTime() + this.timer * 1000 * 60);
+            });
         },
         loadData: function () {
             let satParserWorker = new Worker("satelliteParseWorker.js");
@@ -74,15 +82,13 @@ let me = new Vue({
             var satStatus = [];
             var satVelocity = [];
             var satDate =[];
-            var now = new Date();
             this.satNum = this.satData.length;
             for (var j = 0; j < this.satNum; j++) {
                 var currentPosition = null;
-                var time = new Date(now.getTime());
 
                 try {
                     // var velocity = this.getVelocity(satellite.twoline2satrec(this.satData[j].TLE_LINE1, this.satData[j].TLE_LINE2), time);
-                    var position = this.getPosition(satellite.twoline2satrec(this.satData[j].TLE_LINE1, this.satData[j].TLE_LINE2), time);
+                    var position = this.getPosition(satellite.twoline2satrec(this.satData[j].TLE_LINE1, this.satData[j].TLE_LINE2), this.datetime);
                 } catch (err) {
                     console.log(err + ' in renderSats, sat ' + j);
                     this.everyCurrentPosition.push(null);
@@ -141,11 +147,9 @@ let me = new Vue({
             var tapRecognizer = new WorldWind.TapRecognizer(this.wwd, this.handleClick);
         },
         reComputeLocation: function () {
-            var time = new Date(new Date().getTime() + this.timer * 60000);
-            this.datetime = time
             for (var indx = 0; indx < this.satNum; indx += 1) {
                 try {
-                    var position = this.getPosition(satellite.twoline2satrec(this.satData[indx].TLE_LINE1, this.satData[indx].TLE_LINE2), time);
+                    var position = this.getPosition(satellite.twoline2satrec(this.satData[indx].TLE_LINE1, this.satData[indx].TLE_LINE2), this.datetime);
                     //satVelocity[indx] = getVelocity(satellite.twoline2satrec(this.satData[indx].TLE_LINE1, this.satData[indx].TLE_LINE2), time);
                 } catch (err) {
                     console.log(err + ' in updatePositions interval, sat ' + indx);

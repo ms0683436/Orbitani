@@ -1,0 +1,17 @@
+body {
+    background-color: black;
+}
+
+h1, p {
+    color: white;
+}
+
+.title {
+    font-family: PhosphatePro;
+    text-align: center;
+}
+
+@font-face {
+    font-family: PhosphatePro;
+    src: url(assets/fonts/PhosphatePro-Inline.woff) format("woff");
+}
