@@ -18,8 +18,32 @@ let me = new Vue({
         destination: null,
         radius: 6371,
         loading: false,
-        radarRange: 100, // km
-        debrisImgs: ['debris1.png', 'debris2.png', 'debris3.png', 'debris4.png', 'debris5.png', 'debris6.png']
+        radarRange: 1000, // km
+        debrisImgs: ['debris1.png', 'debris2.png', 'debris3.png', 'debris4.png', 'debris5.png', 'debris6.png'],
+        pickCategory: 'low',
+        debrisCategory: {
+            'all': {
+                'altitudeMin': 0,
+                'altitudeMax': 100000,
+                'file': '_now-30.json'
+            },
+            'low': {
+                'altitudeMin': 0,
+                'altitudeMax': 2000,
+                'file': 'LEO_now-30.json'
+            },
+            'medium': {
+                'altitudeMin': 2001,
+                'altitudeMax': 35786,
+                'file': 'MEO_now-30.json'
+            },
+            'high': {
+                'altitudeMin': 35786,
+                'altitudeMax': 100000,
+                'file': 'HEO_now-30.json'
+            }
+        },
+        altitudeFilter: 1000
     },
     watch: {
         timer: function (val) {
@@ -27,6 +51,9 @@ let me = new Vue({
         },
         satNum: function (val) {
             console.log(val);
+        },
+        pickCategory: function (val) {
+            this.loadData()
         }
     },
     methods: {
@@ -59,7 +86,7 @@ let me = new Vue({
         },
         loadData: function () {
             let satParserWorker = new Worker("satelliteParseWorker.js");
-            satParserWorker.postMessage("work, satellite parser, work!");
+            satParserWorker.postMessage(this.debrisCategory[this.pickCategory].file);
             satParserWorker.addEventListener('message', (event) => {
                 satParserWorker.postMessage('close');
                 this.TLE = event.data;
@@ -223,6 +250,9 @@ let me = new Vue({
                 ((sec / 60.0 + minute) / 60.0 + hr) / 24.0  //  ut in days
             );
         },
+        aboveAltitude: function (altitude) {
+            return altitude < (this.altitudeFilter * 1000)
+        },
         handleClick: function (recognizer) {
             this.endOrbit();
             // The input argument is either an Event or a TapRecognizer. Both have the same properties for determining
@@ -315,6 +345,10 @@ let me = new Vue({
             this.loading = true;
             this.endOrbit();
             this.removeDebris();
+            if (!this.queryString || this.queryString == '') {
+                this.loading = false;
+                return
+            }
             this.geocoder.lookup(this.queryString, (geocoder, result) => {
                 if (result.length > 0) {
                     let latitude = parseFloat(result[0].lat);
@@ -334,8 +368,6 @@ let me = new Vue({
                         z: this.radius * Math.sin(latitude)
                     }
 
-                    
-
                     if (this.TLE.length > 0) {
                         var now = new Date();
                         var debris = [];
@@ -344,6 +376,9 @@ let me = new Vue({
                                 var time = new Date(now.getTime() + (i * 1000 * 60) + (this.timer * 1000 * 60));
                                 try {
                                     var position = this.getPosition(satellite.twoline2satrec(this.TLE[index].TLE_LINE1, this.TLE[index].TLE_LINE2), time);
+                                    if (!this.aboveAltitude(position.altitude)) {
+                                        break;
+                                    }
                                 } catch (err) {
                                     continue;
                                 }

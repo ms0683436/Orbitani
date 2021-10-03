@@ -3,7 +3,7 @@ body {
     font-size: small;
 }
 
-h1, p {
+h1, p, label {
     color: white;
 }
 
