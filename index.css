@@ -1,9 +1,14 @@
 body {
     background-color: black;
+    font-size: small;
 }
 
 h1, p {
     color: white;
+}
+
+p {
+    margin-bottom: 10px;
 }
 
 .title {
