@@ -13,79 +13,55 @@
         <div id="globe" class="container-fluid">
             <h1 class="title mb-3">ORBITANI</h1>
             <div class="row justify-content-center">
-                <div class="col-md-6">
+                <div class="col-md-9">
                     <div class="row">
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <p>Time: </p>
                             <p>{{ datetime }}</p>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <p>Destination:</p>
                             <div class="input-group input-group-sm mb-3">
                                 <input type="text" class="form-control" placeholder="" aria-label="" aria-describedby="basic-addon1" v-model="queryString">
                             </div>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <p>Dataset:</p>
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="all-earth-orbit" id="all-earth-orbit" value="all" v-model="pickCategory">
-                                <label class="form-check-label" for="all-earth-orbit">
-                                    All Earth orbit
-                                </label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="low-earth-orbit" id="low-earth-orbit" value="low" v-model="pickCategory">
-                                <label class="form-check-label" for="low-earth-orbit">
-                                    Low Earth orbit
-                                </label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="medium-earth-orbit" id="medium-earth-orbit" value="medium" v-model="pickCategory">
-                                <label class="form-check-label" for="medium-earth-orbit">
-                                    Medium Earth orbit
-                                </label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="high-earth-orbit" id="high-earth-orbit" value="high" v-model="pickCategory">
-                                <label class="form-check-label" for="high-earth-orbit">
-                                    High Earth orbit
-                                </label>
+                            <select class="form-select form-select-sm" aria-label="Default select example" v-model="pickCategory">
+                                <option value="all">All Earth orbit</option>
+                                <option value="low">Low Earth orbit</option>
+                                <option value="medium">Medium Earth orbit</option>
+                                <option value="high">High Earth orbit</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <p style="color: black;">Debris! Aparecium!</p>
+                            <div class="row">
+                                <div class="col-6"><p><button class="btn btn-outline-secondary btn-sm" style="width: 100%;" type="button" @click="goTo" :disabled="loading">
+                                    Search
+                                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" v-if="loading"></span>
+                                </button></p></div>
+                                <div class="col-6"><p><button class="btn btn-outline-secondary btn-sm" style="width: 100%;" type="button" @click="removeAll">Clear All</button></p></div>
+                                <div class="col-6"><h6>Found: {{ satNum }} Debris</h6></div>
+                                <div class="col-6"><p><button class="btn btn-outline-secondary btn-sm" style="width: 100%;" type="button" @click="getSatellites(TLE)">Show All</button></p></div>
                             </div>
                         </div>
                     </div>
                     <div class="row">
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <p>Time Control: {{ timer }} min</p>
                             <input type="range" list="tickmarks" min="-60" max="60" step="5" style="width: 100%;" v-model="timer" >
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <p>Altitude Control: < {{ altitudeFilter }} km</p>
                                     <input type="range" list="tickmarks" :min="debrisCategory[pickCategory].altitudeMin" :max="debrisCategory[pickCategory].altitudeMax" step="500" style="width: 100%;" v-model="altitudeFilter">
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <p>Range Control: {{ radarRange }} km</p>
                             <input type="range" list="tickmarks" min="0" max="2000" step="100" style="width: 100%;" v-model="radarRange" >
                         </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="row align-items-center">
-                        <div class="col-md-12">
-                            <p>Found: {{ satNum }} Debris</p>
-                        </div>
-                        <div class="col-md-12">
-                            <p>
-                            <button class="btn btn-outline-secondary btn-sm" type="button" @click="goTo" :disabled="loading">
-                                Search
-                                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" v-if="loading"></span>
-                            </button>
-                            </p>
-                        </div>
-                        <div class="col-md-12">
-                            <p><button class="btn btn-outline-secondary btn-sm" type="button" @click="removeAll">Clear All</button></p>
-                        </div>
-                        <div class="col-md-12">
-                            <p><button class="btn btn-outline-secondary btn-sm" type="button" @click="getSatellites(TLE)">Show All</button></p>
+                        <div class="col-md-3 align-self-end">
+                            <p>Present by Orbitani - Debris! Aparecium!</p>
                         </div>
                     </div>
                 </div>
